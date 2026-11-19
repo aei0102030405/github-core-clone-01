@@ -1,3 +1,9 @@
+// github-core-clone-01 entry: a standalone GitHub-compatible git forge in a single
+// Node process. It speaks git smart HTTP (upload-pack / receive-pack), the REST v3
+// API, GraphQL, and MCP, all backed by one deterministic in-memory store, using
+// only the Node standard library — no dependencies, no git binary, no outside
+// service. main.ts is the lifecycle that wires the forge to the harness: bind an
+// ephemeral port, register it with the env, poll /done, then exit 0.
 // The entry <-> env lifecycle, as env/src/wire.ts settles it: bind an ephemeral port, tell the env the
 // port it bound, then poll until the env says the trial is over and exit 0. Keep this file as it is:
 // the suite scores the server app.ts builds, and the lifecycle is the harness's, not the contest's.
@@ -29,6 +35,11 @@ const REQUEST_TIMEOUT_MS = 30_000;
 /** The first wait between retries, and the longest. */
 const RETRY_INITIAL_MS = 250;
 const RETRY_MAX_MS = 2_000;
+
+/** Write one informational line to stdout, prefixed with the entry tag. */
+function logInfo(message: string): void {
+  process.stdout.write(`[entry] ${message}\n`);
+}
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -85,14 +96,14 @@ async function main(): Promise<void> {
   });
   const address = server.address();
   if (address === null || typeof address === 'string') throw new Error('the server did not bind an ephemeral TCP port');
-  process.stdout.write(`[entry] listening on port ${address.port}\n`);
+  logInfo(`listening on port ${address.port}`);
 
   await register(address.port);
-  process.stdout.write('[entry] registered; waiting for the env to say done\n');
+  logInfo('registered; waiting for the env to say done');
 
   await waitForDone();
   server.close();
-  process.stdout.write('[entry] done\n');
+  logInfo('done');
 }
 
 try {
